@@ -1,0 +1,639 @@
+/* 基本樣式設定 */
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #e0cda7 url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+/* 遊戲主區塊 */
+#game-main {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100vw;
+    min-height: 100vh;
+    background: rgba(224,205,167,0.97);
+    padding-top: 60px;
+    box-sizing: border-box;
+}
+
+/* 卡片堆 */
+#deck-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 60px;
+    min-width: 160px;
+    background: rgba(255,255,255,0.13);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(80,60,20,0.18), 0 1.5px 0 #bfa76a inset;
+    padding: 32px 18px 40px 18px;
+    position: relative;
+}
+
+/* 卡片堆標題 */
+.deck-title {
+    font-weight: bold;
+    font-size: 1.3em;
+    margin-bottom: 18px;
+    color: #6e4b1f;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 0 #fffbe6;
+}
+
+/* 卡片區域 */
+#deck-cards {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-bottom: 18px;
+    min-height: 340px;
+    width: 140px;
+    position: relative;
+}
+
+/* 單張卡片樣式 */
+.deck-card {
+    width: 120px;
+    height: 170px;
+    perspective: 700px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 1;
+    pointer-events: none;
+    z-index: 1;
+    /* 移除原本的背景，改由 .deck-card-front 控制 */
+    transition:
+        transform 0.5s cubic-bezier(.4,2,.6,1),
+        z-index 0.2s;
+    border: none; /* 取消外層卡片的 border，避免重複黃線框 */
+}
+
+.deck-card.flipped {
+    /* 先放大顯示於桌面中央，之後再縮小進入題目區 */
+    animation: card-flip-zoom 0.7s cubic-bezier(.4,2,.6,1);
+    transform: translate(260px, 0px) scale(1.45) rotateY(0deg) !important;
+    z-index: 1000;
+}
+
+@keyframes card-flip-zoom {
+    0% {
+        transform: translate(60px, 60px) rotate(-1deg) scale(1.08) rotateY(0deg);
+    }
+    60% {
+        transform: translate(260px, 0px) scale(1.45) rotateY(0deg);
+    }
+    100% {
+        transform: translate(260px, 0px) scale(1.18) rotateY(0deg);
+    }
+}
+
+/* 卡片縮小回題目區（動畫結束後自動套用這個狀態） */
+.deck-card.flipped.shrink {
+    transform: translate(260px, 0px) scale(1.18) rotateY(0deg) !important;
+    animation: none;
+}
+
+.deck-card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transition: transform 0.5s cubic-bezier(.4,2,.6,1);
+    transform-style: preserve-3d;
+}
+
+.deck-card.flipped .deck-card-inner {
+    /* 往右翻（正向） */
+    transform: rotateY(-180deg);
+}
+
+.deck-card-front, .deck-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.deck-card-front {
+    /* 統一所有卡片的牌背顯示方式，填滿且不超出邊框，超出直接裁切 */
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    border: 4px solid #e1c699;
+    box-shadow: 0 8px 24px rgba(80,60,20,0.18), 0 2px 0 #bfa76a inset;
+    background-color: #fffbe6;
+    box-sizing: border-box;
+    padding: 0;
+    overflow: hidden;
+    /* 裁切超出部分 */
+    clip-path: inset(0 0 0 0 round 18px);
+}
+
+.deck-card-back {
+    background: linear-gradient(135deg, #fffbe6 80%, #f7ca18 100%);
+    border: 4px solid #f7ca18;
+    box-shadow: 0 12px 32px 4px rgba(80,60,20,0.28), 0 2px 0 #bfa76a inset;
+    color: #6e4b1f;
+    font-size: 1.15em;
+    font-weight: bold;
+    letter-spacing: 1px;
+    transform: rotateY(180deg);
+    padding: 10px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 堆疊效果，每張卡片稍微錯位 */
+.deck-card:nth-child(1) { transform: translate(0px, 0px) rotate(-4deg); z-index: 1;}
+.deck-card:nth-child(2) { transform: translate(10px, 12px) rotate(-2deg); z-index: 2;}
+.deck-card:nth-child(3) { transform: translate(20px, 24px) rotate(2deg); z-index: 3;}
+.deck-card:nth-child(4) { transform: translate(30px, 36px) rotate(-1deg); z-index: 4;}
+.deck-card:nth-child(5) { transform: translate(40px, 48px) rotate(3deg); z-index: 5;}
+
+/* 最上面一張卡片（可抽取） */
+.deck-card:last-child {
+    box-shadow: 0 12px 32px 4px rgba(80,60,20,0.28), 0 2px 0 #bfa76a inset;
+    border: none; /* 取消最上層卡片的 border，避免重複黃線框 */
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 10;
+    transform: translate(60px, 60px) rotate(-1deg) scale(1.08);
+    opacity: 1;
+    transition: 
+        transform 0.18s cubic-bezier(.4,2,.6,1), 
+        box-shadow 0.18s cubic-bezier(.4,2,.6,1);
+}
+
+/* 抽卡浮起效果 */
+.deck-card:last-child:hover {
+    transform: translate(60px, 40px) rotate(0deg) scale(1.15);
+    box-shadow: 0 24px 48px 8px rgba(80,60,20,0.38), 0 2px 0 #f7ca18 inset;
+    /* 移除背景變化 */
+}
+
+/* 最上面一張卡片的樣式 */
+.deck-card:last-child {
+    margin-bottom: 0;
+}
+
+/* 卡片數量顯示 */
+.deck-count {
+    margin-top: 120px;
+    font-size: 1.15em;
+    color: #6e4b1f;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* 遊戲容器 */
+#game-container {
+    background: #fffbe6;
+    border-radius: 22px;
+    box-shadow: 0 8px 32px rgba(80,60,20,0.13), 0 2px 0 #f7ca18 inset;
+    padding: 48px 36px 36px 36px;
+    width: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 480px;
+    position: relative;
+}
+
+/* 卡片樣式 */
+.card {
+    background: linear-gradient(135deg, #fffbe6 80%, #f7ca18 100%);
+    border-radius: 18px;
+    padding: 38px 40px;
+    margin-bottom: 28px;
+    font-size: 1.7em;
+    box-shadow: 0 8px 32px rgba(80,60,20,0.18), 0 2px 0 #f7ca18 inset;
+    min-width: 320px;
+    min-height: 90px;
+    text-align: center;
+    border: 4px solid #f7ca18;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #6e4b1f;
+    position: relative;
+    z-index: 2;
+    transform: rotate(-1.5deg);
+}
+
+/* 玩家輪到提示 */
+#player-turn {
+    margin-bottom: 22px;
+    font-weight: bold;
+    color: #6e4b1f;
+    font-size: 1.25em;
+    letter-spacing: 1px;
+}
+
+/* 輸入框樣式 */
+input[type="text"] {
+    padding: 12px 18px;
+    border-radius: 8px;
+    border: 2px solid #e1c699;
+    margin-right: 12px;
+    font-size: 1.15em;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.06);
+    outline: none;
+    transition: border 0.2s;
+}
+
+input[type="text"]:focus {
+    border: 2.5px solid #f7ca18;
+}
+
+/* 按鈕樣式 */
+button {
+    background: linear-gradient(135deg, #f7ca18 80%, #f9e79f 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 28px;
+    font-size: 1.15em;
+    cursor: pointer;
+    font-weight: bold;
+    color: #6e4b1f;
+    margin-right: 0;
+    margin-top: 8px;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.08);
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 1px;
+}
+
+/* 按鈕懸停效果 */
+button:hover {
+    background: linear-gradient(135deg, #f5b041 80%, #f9e79f 100%);
+    transform: scale(1.05);
+}
+
+/* 歷史紀錄區域 */
+#history {
+    margin-top: 28px;
+    width: 100%;
+    max-height: 140px;
+    overflow-y: auto;
+    font-size: 1.08em;
+    color: #555;
+    background: rgba(255,255,255,0.7);
+    border-radius: 8px;
+    padding: 10px 8px;
+    box-shadow: 0 1px 4px rgba(80,60,20,0.06);
+}
+
+/* 結果顯示區域 */
+#result {
+    margin-top: 22px;
+    font-size: 1.18em;
+    color: #c0392b;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* 玩家人數設定欄位樣式 */
+#player-setup {
+    position: fixed;
+    top: 18px;
+    right: 32px;
+    z-index: 100;
+    background: rgba(255,255,255,0.92);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.10);
+    padding: 10px 18px;
+    font-size: 1.12em;
+    color: #6e4b1f;
+    font-weight: bold;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#player-count-input {
+    font-size: 1.1em;
+    border-radius: 6px;
+    border: 1.5px solid #e1c699;
+    padding: 2px 6px;
+    width: 48px;
+    text-align: center;
+    margin-left: 4px;
+}
+
+/* 重新遊戲按鈕樣式 */
+#restart-btn {
+    background: linear-gradient(135deg, #e67e22 80%, #f9e79f 100%);
+    color: #fff;
+    font-size: 1.13em;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 32px;
+    margin-top: 28px;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.10);
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+#restart-btn:hover {
+    background: linear-gradient(135deg, #f39c12 80%, #f9e79f 100%);
+    transform: scale(1.06);
+}
+
+/* 跑馬燈區塊樣式 */
+#marquee-bar {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 22px;
+    height: 56px;
+    min-width: 420px;
+    max-width: 820px;
+    width: 70vw;
+    background: linear-gradient(90deg, #f7ca18 60%, #f9e79f 100%);
+    color: #6e4b1f;
+    font-size: 1.22em;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    box-shadow: 0 -4px 24px 0 rgba(80,60,20,0.13), 0 -1.5px 0 #e1c699 inset;
+    border-top: 3.5px solid #e1c699;
+    padding: 0 36px;
+    overflow: hidden;
+    user-select: none;
+    border-radius: 18px 18px 0 0;
+    animation: marquee-bar-in 0.7s;
+}
+
+@keyframes marquee-bar-in {
+    from { transform: translateY(80px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+#marquee-text {
+    white-space: nowrap;
+    animation: marquee-fadein 0.6s;
+    transition: opacity 0.3s;
+    padding: 0 18px;
+    text-shadow: 0 2px 8px #fffbe6, 0 1px 0 #fffbe6;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.13);
+    box-shadow: 0 1px 8px rgba(80,60,20,0.06);
+    min-height: 32px;
+    display: inline-block;
+}
+
+@keyframes marquee-fadein {
+    from { opacity: 0; transform: translateY(10px);}
+    to   { opacity: 1; transform: translateY(0);}
+}
+
+/* 問號提示樣式 */
+#help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 10px;
+    font-size: 1.25em;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(135deg, #f7ca18 70%, #e1c699 100%);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.13);
+    cursor: pointer;
+    user-select: none;
+    border: 2px solid #e1c699;
+    animation: floatY 1.8s ease-in-out infinite alternate;
+    transition: background 0.2s, color 0.2s;
+    position: relative;
+}
+
+@keyframes floatY {
+    0%   { transform: translateY(0);}
+    100% { transform: translateY(-8px);}
+}
+
+#help-icon:hover {
+    background: linear-gradient(135deg, #f9e79f 80%, #f7ca18 100%);
+    color: #c0392b;
+}
+
+#help-tooltip {
+    display: none;
+    position: absolute;
+    top: 38px;
+    right: 0;
+    background: #fffbe6;
+    color: #6e4b1f;
+    border: 1.5px solid #e1c699;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.13);
+    padding: 10px 18px;
+    font-size: 1em;
+    min-width: 220px;
+    z-index: 999;
+    white-space: pre-line;
+    pointer-events: none;
+}
+
+#help-icon:hover + #help-tooltip,
+#help-icon:focus + #help-tooltip {
+    display: block;
+}
+
+/* 題庫按鈕樣式 */
+#show-bank-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    z-index: 120;
+    background: linear-gradient(135deg, #f7ca18 80%, #f9e79f 100%);
+    color: #6e4b1f;
+    font-size: 1.13em;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 28px;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.10);
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+#show-bank-btn:hover {
+    background: linear-gradient(135deg, #f5b041 80%, #f9e79f 100%);
+    transform: scale(1.06);
+}
+
+/* 題庫視窗樣式 */
+#bank-modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: rgba(60,40,10,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#bank-modal-content {
+    background: #fffbe6;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(80,60,20,0.18), 0 2px 0 #f7ca18 inset;
+    padding: 28px 32px 24px 32px;
+    min-width: 340px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+#bank-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+#bank-modal-title {
+    font-size: 1.25em;
+    font-weight: bold;
+    color: #6e4b1f;
+    letter-spacing: 2px;
+}
+
+#bank-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.3em;
+    color: #c0392b;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+#bank-close-btn:hover {
+    background: #f9e79f;
+}
+
+#bank-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.bank-tab {
+    background: #f7ca18;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 22px;
+    font-size: 1em;
+    font-weight: bold;
+    color: #6e4b1f;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+}
+.bank-tab.active,
+.bank-tab:focus {
+    background: #fffbe6;
+    border-bottom: 2.5px solid #f7ca18;
+    color: #c0392b;
+}
+
+#bank-list {
+    font-size: 1.08em;
+    color: #2d3a4b;
+    max-height: 48vh;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+.bank-group-title {
+    font-weight: bold;
+    color: #b7950b;
+    margin-top: 12px;
+    margin-bottom: 2px;
+    font-size: 1.08em;
+    letter-spacing: 1px;
+}
+.bank-list-item {
+    margin-left: 16px;
+    margin-bottom: 2px;
+    line-height: 1.7;
+}
+
+/* 顯示於翻牌時的題目浮層 */
+.deck-card-question {
+    position: fixed;
+    left: 50%;
+    top: 80px;
+    transform: translateX(-50%);
+    z-index: 2001;
+    background: linear-gradient(135deg, #fffbe6 80%, #f7ca18 100%);
+    border: 3px solid #f7ca18;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(80,60,20,0.18), 0 2px 0 #f7ca18 inset;
+    color: #6e4b1f;
+    font-size: 1.45em;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 22px 48px;
+    min-width: 320px;
+    max-width: 80vw;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    animation: show-question-fadein 0.3s forwards;
+}
+
+@keyframes show-question-fadein {
+    from { opacity: 0; transform: translateX(-50%) translateY(20px);}
+    to   { opacity: 1; transform: translateX(-50%) translateY(0);}
+}
+
+/* 卡片背面選擇區域樣式 */
+#cardback-setup {
+    position: fixed;
+    top: 18px;
+    left: 32px;
+    z-index: 101;
+    background: rgba(255,255,255,0.92);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(80,60,20,0.10);
+    padding: 10px 18px;
+    font-size: 1.12em;
+    color: #6e4b1f;
+    font-weight: bold;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#cardback-select {
+    font-size: 1.08em;
+    border-radius: 6px;
+    border: 1.5px solid #e1c699;
+    padding: 2px 8px;
+    margin-left: 4px;
+    background: #fffbe6;
+    color: #6e4b1f;
+}

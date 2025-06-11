@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>描述卡桌遊</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="player-setup">
+        玩家人數：
+        <input type="number" id="player-count-input" min="2" max="10" value="2" style="width:40px;">
+        <span id="help-icon" title="">?</span>
+        <div id="help-tooltip">有的時候會出現回答不出來的，所以沒關係喔!</div>
+    </div>
+    <div id="cardback-setup">
+        牌背：
+        <select id="cardback-select">
+            <option value="卡片背面.png">預設</option>
+            <option value="卡片背面3.png">摩西分紅海</option>
+            <option value="火烤.png">烈火中的信仰</option>
+        </select>
+    </div>
+    <div id="game-main">
+        <div id="deck-stack">
+            <div class="deck-title">卡片堆</div>
+            <div id="deck-cards"></div>
+            <div class="deck-count">剩餘：<span id="deck-count-num"></span></div>
+        </div>
+        <div id="game-container">
+            <!-- 紙張背景圖（縮小70%，最右邊） -->
+            <img id="paper-bg" src="紙張.png" alt="紙張背景"
+                style="position:fixed; right:0; top:60px; width:340px; max-width:45vw; z-index:0; pointer-events:none; opacity:0.93; transform:scale(0.7); transform-origin:top right;">
+            <!-- 規則說明置中於紙張 -->
+            <div id="game-intro"
+                style="
+                    position:fixed;
+                    right:30px;
+                    top:60px;
+                    width:340px;
+                    max-width:45vw;
+                    height:238px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    z-index:1;
+                    pointer-events:none;
+                ">
+                <div style="
+                    color:#4a2c0a;
+                    font-size:0.8em;
+                    font-weight:bold;
+                    line-height:1.7;
+                    text-align:center;
+                    white-space:pre-line;
+                    background:transparent;
+                    width:210px;
+                    margin:auto;
+                    margin-right:0;
+                    margin-left:170px;
+                ">
+                    輪流翻開描述卡，
+                    輪流答題：
+                    說出一個符合
+                    所有描述卡的東西。
+                    直到有人說不出，
+                    就輸了。
+                </div>
+            </div>
+            <div class="card" id="desc-card">請點擊「下一張描述卡」開始遊戲</div>
+            <div id="player-turn"></div>
+            <div>
+                <input type="text" id="answer-input" placeholder="請輸入你的答案" disabled>
+            </div>
+            <div id="result"></div>
+            <div id="history"></div>
+            <button id="restart-btn" style="margin-top:28px;">重新遊戲</button>
+            <button id="show-bank-btn" title="查看題庫" style="position:absolute; top:24px; right:24px; z-index:120;">題庫</button>
+        </div>
+    </div>
+    <div id="marquee-bar">
+        <span id="marquee-text"></span>
+    </div>
+    <div id="bank-modal" style="display:none;">
+        <div id="bank-modal-content">
+            <div id="bank-modal-header">
+                <span id="bank-modal-title">題庫</span>
+                <button id="bank-close-btn" title="關閉">✕</button>
+            </div>
+            <div id="bank-tabs">
+                <button class="bank-tab active" data-type="person">人物</button>
+                <button class="bank-tab" data-type="object">物品</button>
+            </div>
+            <div id="bank-list"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
