@@ -75,6 +75,34 @@ const answerInput = document.getElementById('answer-input');
 const resultDiv = document.getElementById('result');
 const historyDiv = document.getElementById('history');
 
+// 新增一個全域變數來儲存目前題目
+let currentQuestion = null;
+
+// 1. 新增全域暫存下一題
+let pending = null;
+function computePending() {
+    let temp = categoryIndex;
+    for (let i = 0; i < descCategories.length; i++) {
+        const used = usedIndexes[temp] || [];
+        if (used.length < descCategories[temp].length) {
+            const avail = descCategories[temp]
+                .map((_, idx) => used.includes(idx) ? null : idx)
+                .filter(idx => idx !== null);
+            if (avail.length) {
+                const randIdx = avail[Math.floor(Math.random() * avail.length)];
+                return { catIdx: temp, randIdx };
+            }
+        }
+        temp = (temp + 1) % descCategories.length;
+    }
+    return null;
+}
+
+// 新增：根據模式取得第一題
+function getFirstPrompt() {
+    return gameMode === 'person' ? "請說出一個人名" : "請說出一個物品";
+}
+
 function updatePlayerTurn() {
     playerTurnDiv.textContent = gameActive ? `輪到：${players[currentPlayer]}` : "";
 }
@@ -87,7 +115,6 @@ function updateHistory() {
 function updateDeckStack() {
     const deckCardsDiv = document.getElementById('deck-cards');
     const deckCountNum = document.getElementById('deck-count-num');
-    // 計算剩餘題目數
     let remain = 0;
     if (usedIndexes.length === 0) {
         remain = descCategories.reduce((a, b) => a + b.length, 0);
@@ -95,7 +122,6 @@ function updateDeckStack() {
         remain = descCategories.reduce((sum, cat, i) => sum + (cat.length - (usedIndexes[i]?.length || 0)), 0);
     }
     deckCountNum.textContent = remain;
-    // 顯示最多 5 張卡片堆疊
     deckCardsDiv.innerHTML = '';
     const showCount = Math.min(remain, 5);
     for (let i = 0; i < showCount; i++) {
@@ -104,11 +130,8 @@ function updateDeckStack() {
         const cardInner = document.createElement('div');
         cardInner.className = 'deck-card-inner';
 
-        // 正面（背面圖）
         const cardFront = document.createElement('div');
         cardFront.className = 'deck-card-front';
-
-        // 支援三種牌背
         cardFront.style.backgroundImage = `url('${cardbackImg}')`;
         cardFront.style.backgroundSize = 'cover';
         cardFront.style.backgroundPosition = 'center center';
@@ -116,15 +139,22 @@ function updateDeckStack() {
         cardFront.style.transform = '';
         cardFront.innerHTML = '';
 
-        // 背面（題目，僅最上層顯示）
         const cardBack = document.createElement('div');
         cardBack.className = 'deck-card-back';
-        // 只在最上層卡片顯示題目，且翻轉時動態顯示新題目
-        if (usedCards.length === 0 && i === showCount - 1) {
-            cardBack.textContent = "開始遊戲";
-        } else if (i === showCount - 1 && usedCards.length > 0) {
-            // 預設顯示上一輪題目，翻轉時會即時更新
-            cardBack.textContent = usedCards[usedCards.length - 1];
+
+        // 只在第一張顯示提示
+        if (i === showCount - 1 && remain > 0) {
+            let displayText = "";
+            if (usedCards.length === 0) {
+                if (!gameMode) {
+                    gameMode = Math.random() < 0.5 ? 'person' : 'object';
+                }
+                displayText = gameMode === 'person' ? "請說出一個人名" : "請說出一個物品";
+            } else {
+                // 翻牌前不顯示下一題
+                displayText = "";
+            }
+            cardBack.textContent = displayText;
         } else {
             cardBack.textContent = '';
         }
@@ -138,73 +168,70 @@ function updateDeckStack() {
             cardDiv.style.zIndex = 10;
             cardDiv.addEventListener('click', () => {
                 if (cardDiv.classList.contains('flipped')) return;
-                cardDiv.classList.add('flipped');
 
+                // 新增：播放翻牌音效
+                try { flipAudio.currentTime = 0; flipAudio.play(); } catch(e){}
+
+                // 立即產生題目並顯示在卡片背面與題目欄
+                if (!gameActive && usedCards.length === 0) {
+                    // 第一題
+                    let prompt = gameMode === 'person' ? "請說出一個人名" : "請說出一個物品";
+                    usedCards.push(prompt);
+                    descCardDiv.textContent = "描述卡：" + usedCards.join("，");
+                    cardBack.textContent = prompt;
+                    answerInput.value = "";
+                    answerInput.disabled = false;
+                    answerInput.focus();
+                    resultDiv.textContent = "";
+                    gameActive = true;
+                    currentPlayer = 0;
+                    updatePlayerTurn();
+                    descCategories = (gameMode === 'person') ? descCategoriesPerson : descCategoriesObject;
+                    usedIndexes = descCategories.map(() => []);
+                    categoryIndex = 0;
+                } else if (gameActive) {
+                    const lastHistory = history[history.length - 1] || "";
+                    const answered = lastHistory.startsWith(players[currentPlayer] + "：");
+                    if (usedCards.length === 0) {
+                        // 不會進來
+                    } else if (!answered) {
+                        endGame();
+                        updateDeckStack();
+                        return;
+                    } else {
+                        // 產生新題目
+                        if (!Array.isArray(usedIndexes) || usedIndexes.length !== descCategories.length) {
+                            usedIndexes = descCategories.map(() => []);
+                        }
+                        let pending = computePending();
+                        if (pending) {
+                            const { catIdx, randIdx } = pending;
+                            if (!Array.isArray(usedIndexes[catIdx])) usedIndexes[catIdx] = [];
+                            usedIndexes[catIdx].push(randIdx);
+                            const card = descCategories[catIdx][randIdx];
+                            usedCards.push(card);
+                            descCardDiv.textContent = "描述卡：" + usedCards.join("，");
+                            cardBack.textContent = card;
+                            answerInput.value = "";
+                            answerInput.disabled = false;
+                            answerInput.focus();
+                            resultDiv.textContent = "";
+                            gameActive = true;
+                            currentPlayer = (currentPlayer + 1) % players.length;
+                            updatePlayerTurn();
+                            categoryIndex = (catIdx + 1) % descCategories.length;
+                        }
+                    }
+                }
+
+                cardDiv.classList.add('flipped');
                 setTimeout(() => {
                     cardDiv.classList.add('shrink');
                     setTimeout(() => {
-                        // --- 新增：翻轉時即時顯示新題目 ---
-                        let newCardText = "";
-                        if (!gameActive && usedCards.length === 0) {
-                            // 第一次開始
-                            // 預測下一題內容
-                            const mode = Math.random() < 0.5 ? 'person' : 'object';
-                            newCardText = mode === 'person' ? "請說出一個人名" : "請說出一個物品";
-                        } else if (gameActive) {
-                            // 取得下一題內容
-                            if (usedCards.length === 0) {
-                                // 不會進到這裡
-                                newCardText = "";
-                            } else if (!history[history.length - 1] || !history[history.length - 1].startsWith(players[currentPlayer] + "：")) {
-                                // 沒有回答，維持原本題目
-                                newCardText = usedCards[usedCards.length - 1];
-                            } else {
-                                // 預測下一題內容
-                                // 找到下一個還有題目的組
-                                let tempCategoryIndex = categoryIndex;
-                                let found = false;
-                                for (let loop = 0; loop < descCategories.length; loop++) {
-                                    if (usedIndexes[tempCategoryIndex].length < descCategories[tempCategoryIndex].length) {
-                                        found = true;
-                                        break;
-                                    }
-                                    tempCategoryIndex = (tempCategoryIndex + 1) % descCategories.length;
-                                }
-                                if (found) {
-                                    const available = descCategories[tempCategoryIndex]
-                                        .map((item, idx) => usedIndexes[tempCategoryIndex].includes(idx) ? null : idx)
-                                        .filter(idx => idx !== null);
-                                    if (available.length > 0) {
-                                        const randIdx = available[Math.floor(Math.random() * available.length)];
-                                        newCardText = descCategories[tempCategoryIndex][randIdx];
-                                    }
-                                }
-                            }
-                        }
-                        // 顯示新題目
-                        cardBack.textContent = newCardText || cardBack.textContent;
-                        // --- end 新增 ---
-
-                        // ...原本遊戲流程...
-                        if (!gameActive && usedCards.length === 0) {
-                            nextCard();
-                        } else if (gameActive) {
-                            const lastHistory = history[history.length - 1] || "";
-                            const answered = lastHistory.startsWith(players[currentPlayer] + "：");
-                            if (usedCards.length === 0) {
-                                nextCard();
-                            } else if (!answered) {
-                                endGame();
-                                updateDeckStack();
-                            } else {
-                                nextCard();
-                            }
-                        }
-                        setTimeout(() => {
-                            cardDiv.classList.remove('flipped', 'shrink');
-                        }, 400);
-                    }, 300);
-                }, 700);
+                        cardDiv.classList.remove('flipped', 'shrink');
+                        updateDeckStack(); // 重新渲染卡片堆
+                    }, 400);
+                }, 300);
             });
         }
         // 疊放效果
@@ -218,34 +245,9 @@ function updateDeckStack() {
     }
 }
 
-// 修正：只有在玩家沒回答時才結束遊戲，否則正常進行下一回合
+// nextCard 只保留結束遊戲判斷（不再負責題目產生）
 function nextCard() {
-    // 第一題時決定模式
-    if (usedCards.length === 0) {
-        // 隨機決定模式
-        gameMode = Math.random() < 0.5 ? 'person' : 'object';
-        descCategories = (gameMode === 'person') ? descCategoriesPerson : descCategoriesObject;
-        usedIndexes = descCategories.map(() => []);
-        categoryIndex = 0;
-        // 顯示第一題
-        if (gameMode === 'person') {
-            usedCards.push("請說出一個人名");
-        } else {
-            usedCards.push("請說出一個物品");
-        }
-        descCardDiv.textContent = "描述卡：" + usedCards.join("，");
-        answerInput.value = "";
-        answerInput.disabled = false;
-        answerInput.focus();
-        resultDiv.textContent = "";
-        gameActive = true;
-        currentPlayer = 0; // 修正：第一次開始時從玩家1開始
-        updatePlayerTurn();
-        updateDeckStack();
-        return;
-    }
-
-    // 若所有組都抽完，遊戲結束
+    if (usedCards.length === 0) return; // 已由翻牌事件處理
     if (descCategories.every((cat, i) => usedIndexes[i].length >= cat.length)) {
         descCardDiv.textContent = "所有描述卡已用完，遊戲結束！";
         answerInput.disabled = true;
@@ -253,36 +255,6 @@ function nextCard() {
         updateDeckStack();
         return;
     }
-    // 找到下一個還有題目的組
-    let startIdx = categoryIndex;
-    while (usedIndexes[categoryIndex].length >= descCategories[categoryIndex].length) {
-        categoryIndex = (categoryIndex + 1) % descCategories.length;
-        if (categoryIndex === startIdx) {
-            descCardDiv.textContent = "所有描述卡已用完，遊戲結束！";
-            answerInput.disabled = true;
-            gameActive = false;
-            updateDeckStack();
-            return;
-        }
-    }
-    // 從該組隨機抽一個沒抽過的
-    const available = descCategories[categoryIndex]
-        .map((item, idx) => usedIndexes[categoryIndex].includes(idx) ? null : idx)
-        .filter(idx => idx !== null);
-    const randIdx = available[Math.floor(Math.random() * available.length)];
-    usedIndexes[categoryIndex].push(randIdx);
-    const card = descCategories[categoryIndex][randIdx];
-    usedCards.push(card);
-    descCardDiv.textContent = "描述卡：" + usedCards.join("，");
-    answerInput.value = "";
-    answerInput.disabled = false;
-    answerInput.focus();
-    resultDiv.textContent = "";
-    gameActive = true;
-    currentPlayer = (currentPlayer + 1) % players.length;
-    updatePlayerTurn();
-    updateDeckStack();
-    categoryIndex = (categoryIndex + 1) % descCategories.length;
 }
 
 // 修正：只有沒回答才會淘汰，否則正常進行下一回合
@@ -317,6 +289,7 @@ restartBtn.addEventListener('click', () => {
     gameActive = false;
     currentPlayer = 0;
     gameMode = null;
+    pending = null;
     descCategories = descCategoriesPerson;
     descCardDiv.textContent = "請點擊左邊卡片開始遊戲";
     answerInput.disabled = true;
@@ -341,6 +314,7 @@ playerCountInput.addEventListener('change', () => {
     history = [];
     gameActive = false;
     gameMode = null;
+    pending = null;
     descCategories = descCategoriesPerson;
     descCardDiv.textContent = "請點擊左邊卡片開始遊戲";
     answerInput.disabled = true;
@@ -596,6 +570,10 @@ function showMosesStory() {
         if (block.parentNode) block.parentNode.removeChild(block);
     }, 30000);
 }
+
+// 新增：翻牌音效
+const flipAudio = new Audio('翻牌.mp3');
+flipAudio.volume = 0.2; // 音量調低，0.2為較小聲
 
 // 這個訊息代表有檔案（如圖片、音效、js、css等）在網頁載入時找不到
 // 請檢查你在 HTML 或 JS 裡引用的檔案名稱、路徑是否正確
